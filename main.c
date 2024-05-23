@@ -67,6 +67,10 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    // enable altgr
+    libevdev_enable_event_type(dev, EV_KEY);
+    libevdev_enable_event_code(dev, EV_KEY, KEY_RIGHTALT, NULL);
+
     // Initialize uinput device
     struct libevdev_uinput *uidev;
     int err = libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED, &uidev);
@@ -106,6 +110,7 @@ int main(int argc, char** argv) {
 		            libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
 		        }
 		    }
+		    printf("%d\n", ev.code);
             rc = libevdev_uinput_write_event(uidev, ev.type, ev.code, ev.value);
             libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
         }
