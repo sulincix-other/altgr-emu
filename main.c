@@ -14,7 +14,8 @@ int find_keyboard_device(char *device_path) {
     DIR *dir;
     struct dirent *ent;
     char path[1024];
-    puts(device_path);
+    bool found = false;
+    printf("Searching:\n");
     if ((dir = opendir("/dev/input/")) != NULL) {
         while ((ent = readdir(dir)) != NULL) {
             if (strncmp(ent->d_name, "event", 5) == 0) {
@@ -25,11 +26,12 @@ int find_keyboard_device(char *device_path) {
                     if (libevdev_new_from_fd(fd, &dev) >= 0) {
                         if (libevdev_has_event_type(dev, EV_KEY) &&
                             libevdev_has_event_code(dev, EV_KEY, KEY_A)) {
-                            strcpy(device_path, path);
-                            closedir(dir);
-                            libevdev_free(dev);
-                            close(fd);
-                            return 0;
+                            printf("%s => %s\n", path, libevdev_get_name(dev));
+                            if(!found){
+                                strcpy(device_path, path);
+                                found = true;
+                            }
+
                         }
                         libevdev_free(dev);
                     }
@@ -39,6 +41,7 @@ int find_keyboard_device(char *device_path) {
         }
         closedir(dir);
     }
+    printf("Using: %s\n", device_path);
     return -1;
 }
 int main(int argc, char** argv) {
@@ -52,8 +55,6 @@ int main(int argc, char** argv) {
         strncpy(dev_path, argv[1], 1024);
     }
 
-
-    puts(dev_path);
     int fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
         perror("Failed to open device");
@@ -67,6 +68,11 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    // replace vendor info
+    libevdev_set_name(dev, "AltGr Emulator");
+    libevdev_set_id_vendor(dev, 0x1453);
+    libevdev_set_id_product(dev, 0x1299);
+
     // enable altgr
     libevdev_enable_event_type(dev, EV_KEY);
     libevdev_enable_event_code(dev, EV_KEY, KEY_RIGHTALT, NULL);
@@ -79,6 +85,9 @@ int main(int argc, char** argv) {
         libevdev_free(dev);
         return -1;
     }
+
+	// sleep 300ms
+    usleep(300);
 
     ioctl(libevdev_get_fd(dev), EVIOCGRAB, 1);
 
